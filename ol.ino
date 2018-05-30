@@ -53,6 +53,11 @@ static const unsigned char PROGMEM yeti[] =
 #define LED_PIN 13
 #define TEMP_PIN 10
 
+// Bluetooth variables
+#define CONNECTED -1
+#define DISCONNECTED -2
+char BTState = DISCONNECTED;
+
 
 boolean prevButton = false;   // previous pushbutton state
 boolean prevTrigger = false;  // previous trigger state
@@ -65,8 +70,10 @@ OneWire oneWire(10);
 DallasTemperature sensors(&oneWire);
 
 // wait after shooting in millisecond
-#define SHOT_COOLDOWN 5
-// wait after shooting in millisecond
+unsigned char shDelay = 5;
+
+unsigned char dwell = 20;   // time the valve is open
+
 #define CALCULATE_STUFF 60000
 
 int shootCnt = 0;
@@ -75,6 +82,7 @@ unsigned long lastRenderTime = millis();
 unsigned long lastEtcRenderTime = millis();
 
 unsigned char mode = 0;
+
 // cia burst mode kiekis
 #define BURST_AMOUNT 3 
 
@@ -93,11 +101,10 @@ const int16_t pausesBetweenShots[] =
 }; // Happy birthday ritmas
 //sesioliktine - 125, astuntine - 250, ketvirtine - 500
 
-float lengthMultiplier = 1; //jeigu per greitai groja ritma tai padidink
+float lengthMultiplier = 1; // jeigu per greitai groja ritma tai padidink
 
 unsigned char graphY[128];
 
-unsigned char dwell = 20;   // shot delay
 
 void setup()
 {
@@ -105,9 +112,6 @@ void setup()
   pinMode(BUTTON_PIN, INPUT);  // initialize the mode pin as an input
   pinMode(TRIGGER_PIN, INPUT); // initialize the trigger pin as an input
   pinMode(TEMP_PIN, INPUT);
-  int ROF = 1;
-  int Delay = 20;
-
   
   sensors.begin(); 
 
@@ -138,6 +142,7 @@ void setup()
     delay(1); 
   }
 }
+
 
 void loop()
 {
@@ -195,23 +200,40 @@ void loop()
     prevTrigger = false;
   }
 
-// RATE OF FIRE REGULATOR
+// BLUETOOTH
   if (Serial.available() > 0)
   {
-    dwell = Serial.read();
-    Serial.print("dwell val: ");
-    Serial.println(dwell);
+    int16_t data = Serial.read();
+
+    Serial.print("READ: ");
+    Serial.println(data);
+
+    if (data == CONNECTED)
+    {
+      BTState
+      Serial.println("Connected!");
+    }
+    else if (data == DISCONNECTED)
+    {
+      Serial.println("Disconnected!");
+    }
+    if (0 < data && data < 51)
+    {
+      dwell = (unsigned char)data;
+      Serial.print("dwell val: ");
+      Serial.println(dwell);
+    }
+    else if (50 < data && data < 101)
+    {
+      shDelay = (unsigned char)data - 50;
+      Serial.print("Delay val: ");
+      Serial.println(shDelay);      
+    }
   }
 
 // DISPLAY UPDATES
-
-  int ROF = 1;
-  int Delay = 20;
-
   display.setCursor(0, 0);
-  display.println(ROF);
-
-
+  display.println(RateOfFire());
   
   calculateEtc();
   ShootAndModeDraw(shootCnt, 
@@ -235,6 +257,7 @@ void loop()
   }
 }
 
+
 void semi(boolean released)
 {
   if (released)
@@ -247,10 +270,12 @@ void semi(boolean released)
   }
 }
 
+
 void full()
 {
   shoot();
 }
+
 
 void burst(int16_t n, boolean released)
 {
@@ -267,6 +292,7 @@ void burst(int16_t n, boolean released)
   }
 }
 
+
 void rythmic()
 {
   int pauseCount = 0;
@@ -278,9 +304,10 @@ void rythmic()
   }
 }
 
+
 void shoot()
 {
-  delay(SHOT_COOLDOWN);
+  delay(shDelay);
   digitalWrite(LED_PIN, HIGH);
   delay(dwell);
   digitalWrite(LED_PIN, LOW);
@@ -301,6 +328,7 @@ void shoot()
   Serial.println(shootCnt);
 }
 
+
 void calculateEtc()
 {
   float currentTime = millis();
@@ -313,11 +341,13 @@ void calculateEtc()
   }
 }
 
+
 float calcTemp()
 {
   sensors.requestTemperatures();
   return sensors.getTempCByIndex(0);
 }
+
 
 void GraphUpdate(int &yPos)
 {
@@ -328,6 +358,7 @@ void GraphUpdate(int &yPos)
   graphY[127] = yPos;
 }
 
+
 void GraphDraw()
 {
   for (unsigned char i = 0; i < 128; ++i)
@@ -337,6 +368,7 @@ void GraphDraw()
       WHITE);
   }
 }
+
 
 void ShootAndModeDraw(int &shCnt, const char* text)
 {
@@ -360,3 +392,8 @@ void ShootAndModeDraw(int &shCnt, const char* text)
   display.println(currentTemp);
 }
 
+
+unsigned char RateOfFire()
+{
+  return 1000 / (dwell + shDelay);
+}
