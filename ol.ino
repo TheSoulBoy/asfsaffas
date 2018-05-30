@@ -56,7 +56,7 @@ static const unsigned char PROGMEM yeti[] =
 // Bluetooth variables
 #define CONNECTED -1
 #define DISCONNECTED -2
-char BTState = DISCONNECTED;
+// char BTState = DISCONNECTED;
 
 
 boolean prevButton = false;   // previous pushbutton state
@@ -71,13 +71,12 @@ DallasTemperature sensors(&oneWire);
 
 // wait after shooting in millisecond
 unsigned char shDelay = 5;
-
 unsigned char dwell = 20;   // time the valve is open
 
 #define CALCULATE_STUFF 60000
 
-int shootCnt = 0;
-float currentTemp = -420;
+unsigned int shootCnt = 0;
+float currentTemp = -420.0f;
 unsigned long lastRenderTime = millis();
 unsigned long lastEtcRenderTime = millis();
 
@@ -101,7 +100,7 @@ const int16_t pausesBetweenShots[] =
 }; // Happy birthday ritmas
 //sesioliktine - 125, astuntine - 250, ketvirtine - 500
 
-float lengthMultiplier = 1; // jeigu per greitai groja ritma tai padidink
+// float lengthMultiplier = 1; // jeigu per greitai groja ritma tai padidink
 
 unsigned char graphY[128];
 
@@ -133,11 +132,11 @@ void setup()
   display.drawBitmap(0, 0, yeti, 64, 60, WHITE);
   display.display();
 
-  for(int xval = 0; xval <= 124; xval++)
+  for(unsigned char xval = 0; xval <= 124; xval++)
   {
-    int y = 63; 
-    display.drawPixel(xval, y, WHITE);
-    display.drawPixel(xval, y - 1, WHITE);
+    unsigned char y = 63;
+    display.drawPixel((int)xval, (int)y, WHITE);
+    display.drawPixel((int)xval, (int)y - 1, WHITE);
     display.display();
     delay(1); 
   }
@@ -201,7 +200,7 @@ void loop()
   }
 
 // BLUETOOTH
-  if (Serial.available() > 0)
+/*  if (Serial.available() > 0)
   {
     int16_t data = Serial.read();
 
@@ -229,7 +228,7 @@ void loop()
       Serial.print("Delay val: ");
       Serial.println(shDelay);      
     }
-  }
+  }*/
 
 // DISPLAY UPDATES
   display.setCursor(0, 0);
@@ -299,7 +298,7 @@ void rythmic()
   while(pauseCount < MY_SIZE)
   {
     shoot();
-    delay(pausesBetweenShots[pauseCount] * lengthMultiplier);
+    delay(pausesBetweenShots[pauseCount]);
     pauseCount++;
   }
 }
