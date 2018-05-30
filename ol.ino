@@ -44,6 +44,7 @@ static const unsigned char PROGMEM yeti[] =
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+// PINS --------------------------
 // the number of the mode pin
 #define BUTTON_PIN 8
 // the number of the trigger pin
@@ -51,6 +52,7 @@ static const unsigned char PROGMEM yeti[] =
 // the number of the LED (out) pin
 #define LED_PIN 13
 #define TEMP_PIN 10
+
 
 boolean prevButton = false;   // previous pushbutton state
 boolean prevTrigger = false;  // previous trigger state
@@ -94,6 +96,8 @@ const int16_t pausesBetweenShots[] =
 float lengthMultiplier = 1; //jeigu per greitai groja ritma tai padidink
 
 unsigned char graphY[128];
+
+unsigned char dwell = 20;   // shot delay
 
 void setup()
 {
@@ -191,6 +195,14 @@ void loop()
     prevTrigger = false;
   }
 
+// RATE OF FIRE REGULATOR
+  if (Serial.available() > 0)
+  {
+    dwell = Serial.read();
+    Serial.print("dwell val: ");
+    Serial.println(dwell);
+  }
+
 // DISPLAY UPDATES
 
   int ROF = 1;
@@ -198,6 +210,8 @@ void loop()
 
   display.setCursor(0, 0);
   display.println(ROF);
+
+
   
   calculateEtc();
   ShootAndModeDraw(shootCnt, 
@@ -238,11 +252,11 @@ void full()
   shoot();
 }
 
-void burst(int n, boolean released)
+void burst(int16_t n, boolean released)
 {
   if (released)
   {
-    for (int i = 0; i < n; ++i) 
+    for (int16_t i = 0; i < n; ++i) 
     {
       shoot();
     }
@@ -268,7 +282,7 @@ void shoot()
 {
   delay(SHOT_COOLDOWN);
   digitalWrite(LED_PIN, HIGH);
-  delay(20);
+  delay(dwell);
   digitalWrite(LED_PIN, LOW);
   shootCnt++;
   ShootAndModeDraw(shootCnt, 
@@ -285,7 +299,6 @@ void shoot()
 
   Serial.print("Shot count: ");
   Serial.println(shootCnt);
-  
 }
 
 void calculateEtc()
