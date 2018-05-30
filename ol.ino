@@ -9,7 +9,7 @@
 Adafruit_SSD1306 display;
 MechaQMC5883 qmc;
 
-static const unsigned char PROGMEM yeti[] =
+static const uint_least8_t PROGMEM yeti[] =
 { 
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
@@ -70,17 +70,17 @@ OneWire oneWire(10);
 DallasTemperature sensors(&oneWire);
 
 // wait after shooting in millisecond
-unsigned char shDelay = 5;
-unsigned char dwell = 20;   // time the valve is open
+uint_least8_t shDelay = 5;
+uint_least8_t dwell = 20;   // time the valve is open
 
 #define CALCULATE_STUFF 60000
 
 unsigned int shootCnt = 0;
 float currentTemp = -420.0f;
-unsigned long lastRenderTime = millis();
-unsigned long lastEtcRenderTime = millis();
+uint_least32_t lastRenderTime = millis();
+uint_least32_t lastEtcRenderTime = millis();
 
-unsigned char mode = 0;
+uint_least8_t mode = 0;
 
 // cia burst mode kiekis
 #define BURST_AMOUNT 3 
@@ -102,7 +102,7 @@ const int16_t pausesBetweenShots[] =
 
 // float lengthMultiplier = 1; // jeigu per greitai groja ritma tai padidink
 
-unsigned char graphY[128];
+uint_least8_t graphY[128];
 
 
 void setup()
@@ -132,9 +132,9 @@ void setup()
   display.drawBitmap(0, 0, yeti, 64, 60, WHITE);
   display.display();
 
-  for(unsigned char xval = 0; xval <= 124; xval++)
+  for(uint_least8_t xval = 0; xval <= 124; xval++)
   {
-    unsigned char y = 63;
+    uint_least8_t y = 63;
     display.drawPixel((int)xval, (int)y, WHITE);
     display.drawPixel((int)xval, (int)y - 1, WHITE);
     display.display();
@@ -218,13 +218,13 @@ void loop()
     }
     if (0 < data && data < 51)
     {
-      dwell = (unsigned char)data;
+      dwell = (uint_least8_t)data;
       Serial.print("dwell val: ");
       Serial.println(dwell);
     }
     else if (50 < data && data < 101)
     {
-      shDelay = (unsigned char)data - 50;
+      shDelay = (uint_least8_t)data - 50;
       Serial.print("Delay val: ");
       Serial.println(shDelay);      
     }
@@ -350,7 +350,7 @@ float calcTemp()
 
 void GraphUpdate(int &yPos)
 {
-  for (unsigned char i = 0; i < 127; ++i)
+  for (uint_least8_t i = 0; i < 127; ++i)
   {
     graphY[(int16_t)i] = graphY[(int16_t)i + 1];
   }
@@ -360,7 +360,7 @@ void GraphUpdate(int &yPos)
 
 void GraphDraw()
 {
-  for (unsigned char i = 0; i < 128; ++i)
+  for (uint_least8_t i = 0; i < 128; ++i)
   {
     display.drawPixel((int16_t)i, 
       64 - (int16_t)graphY[i] * 32 / 360, 
@@ -369,7 +369,7 @@ void GraphDraw()
 }
 
 
-void ShootAndModeDraw(int &shCnt, const char* text)
+void ShootAndModeDraw(unsigned int &shCnt, const char* text)
 {
   char string[10];
   dtostrf(shCnt, 3, 0, string);
@@ -392,7 +392,7 @@ void ShootAndModeDraw(int &shCnt, const char* text)
 }
 
 
-unsigned char RateOfFire()
+uint_least8_t RateOfFire()
 {
   return 1000 / (dwell + shDelay);
 }
