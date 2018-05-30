@@ -64,7 +64,8 @@ DallasTemperature sensors(&oneWire);
 
 // wait after shooting in millisecond
 #define SHOT_COOLDOWN 5
-const unsigned int calculateStuff = 60000; // wait after shooting in millisecond
+// wait after shooting in millisecond
+#define CALCULATE_STUFF 60000
 
 int shootCnt = 0;
 float currentTemp = -420;
@@ -76,7 +77,7 @@ unsigned char mode = 0;
 #define BURST_AMOUNT 3 
 
 #define MY_SIZE 25
-const int pausesBetweenShots[] = 
+const int16_t pausesBetweenShots[] = 
 {
   125, 125,
   250, 250, 250,
@@ -162,12 +163,6 @@ void loop()
     prevButton = false;
   }
 
-    int ROF = 1;
-  int Delay = 20;
-
-
-    display.setCursor(0, 0);
-    display.println(ROF);
 
 // SHOTING
   if (triggerState == HIGH)
@@ -197,9 +192,15 @@ void loop()
   }
 
 // DISPLAY UPDATES
+
+  int ROF = 1;
+  int Delay = 20;
+
+  display.setCursor(0, 0);
+  display.println(ROF);
   
   calculateEtc();
-   ShootAndModeDraw(shootCnt, 
+  ShootAndModeDraw(shootCnt, 
     mode == 0 ? "Safe" :
     mode == 1 ? "Semi" :
     mode == 2 ? "Auto" :
@@ -207,19 +208,16 @@ void loop()
     mode == 4 ? "Rhythmic" : "");
 
   GraphDraw();
-
-  static unsigned char T = 0;
-  if (T++ > 0,5)          // Refresh rate
+  
   {
-    T = 0;
     int x, y, z, azimuth;
     qmc.read(&x, &y, &z, &azimuth);
     GraphUpdate(azimuth);
-    
-    if (!displayed)
-    {
-      display.display();
-    }
+  }  
+  
+  if (!displayed)
+  {
+    display.display();
   }
 }
 
@@ -293,13 +291,13 @@ void shoot()
 void calculateEtc()
 {
   float currentTime = millis();
-  boolean isCacheInvalid = currentTime - lastEtcRenderTime > calculateStuff || currentTemp == -420;
+  boolean isCacheInvalid = currentTime - lastEtcRenderTime > CALCULATE_STUFF || currentTemp == -420;
   boolean isButtonPinTriggered = digitalRead(BUTTON_PIN) == HIGH;
   if (isCacheInvalid && !isButtonPinTriggered)
   {
     currentTemp = calcTemp();
     lastEtcRenderTime = millis();
-      }
+  }
 }
 
 float calcTemp()
@@ -310,18 +308,18 @@ float calcTemp()
 
 void GraphUpdate(int &yPos)
 {
-  for (int i = 0; i < 127; ++i)
+  for (unsigned char i = 0; i < 127; ++i)
   {
-    graphY[i] = graphY[i + 1];
+    graphY[(int16_t)i] = graphY[(int16_t)i + 1];
   }
   graphY[127] = yPos;
 }
 
 void GraphDraw()
 {
-  for (int i = 0; i < 128; ++i)
+  for (unsigned char i = 0; i < 128; ++i)
   {
-    display.drawPixel(i, 
+    display.drawPixel((int16_t)i, 
       64 - (int16_t)graphY[i] * 32 / 360, 
       WHITE);
   }
@@ -345,8 +343,7 @@ void ShootAndModeDraw(int &shCnt, const char* text)
   display.setCursor(64, 10);
   display.println(shCnt);
       
-    display.setCursor(0, 30);
-    display.println(currentTemp);
-
+  display.setCursor(0, 30);
+  display.println(currentTemp);
 }
 
