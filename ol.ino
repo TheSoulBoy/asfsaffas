@@ -160,7 +160,7 @@ void loop()
     }
 
     // prints current mode to console
-    Serial.print("Mode: ");
+    Serial.print("Master Mode: ");
     Serial.println(mode);
 
     // prevents multiple switching
@@ -231,7 +231,7 @@ void loop()
   }*/
 
 // DISPLAY UPDATES
-  display.setCursor(0, 0);
+  /*display.setCursor(0, 0);
   display.println(RateOfFire());
   
   calculateEtc();
@@ -253,7 +253,12 @@ void loop()
   if (!displayed)
   {
     display.display();
-  }
+  }*/
+
+// SLAVE COMMANDS
+  Wire.beginTransmission(9);
+  Wire.write(mode);
+  Wire.endTransmission();
 }
 
 
