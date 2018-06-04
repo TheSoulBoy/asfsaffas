@@ -258,15 +258,13 @@ void loop()
 // SLAVE COMMANDS
   static uint_least8_t pMode = 8;
 
-  Wire.beginTransmission(9);
-
   if (pMode != mode)
   {
+    Wire.beginTransmission(9);
     Wire.write(mode);
     pMode = mode;
+    Wire.endTransmission();
   }
-  
-  Wire.endTransmission();
 }
 
 
