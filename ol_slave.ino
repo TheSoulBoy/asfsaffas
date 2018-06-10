@@ -37,6 +37,13 @@ static const uint_least8_t PROGMEM yeti[] =
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+// Slave Flags
+#define RESET 0
+#define DISPLAY (1 << 0)          // 0000 0001
+#define FORCE_DISPLAY (1 << 1)    // 0000 0010
+#define AZIMUTH (1 << 2)          // 0000 0100
+#define TEMPERATURE (1 << 3)      // 0000 1000
+
 Adafruit_SSD1306 display;
 
 boolean displayed = false;    // has display been already refreshed
@@ -66,14 +73,34 @@ void loop()
 
 void receiveEvent(int bytes)
 {
-  uint_least8_t x = Wire.read();    // read one byte from the I2C
-  // prints current mode to console
-  Serial.print("Slave Mode: ");
-  Serial.println(x);
+  uint_least8_t orders = Wire.read();    // read one byte from the I2C
 
-  /*
-  if (orders & (1 << 3))
-  */
+  if (orders & DISPLAY)
+  {
+    // shootCnt
+    uint_least8_t mode = Wire.read();
+    ShootAndModeDraw(0, mode);
+    displayed = true;
+  }
+  if (orders & FORCE_DISPLAY)
+  {
+    
+    displayed = true;
+  }
+  if (orders & AZIMUTH)
+  {
+    uint_least8_t azim = Wire.read();
+    GraphUpdateAndDraw(azim);
+  }
+  if (orders & TEMPERATURE)
+  {
+    float c = Wire.read();
+    currentTemp = (c << 8) | (Wire.read());
+  }
+  if (orders == RESET)
+  {
+    displayed = false;
+  }
 }
 
 
@@ -121,7 +148,7 @@ void GraphUpdateAndDraw(uint_least8_t &yPos)
 }
 
 
-void ShootAndModeDraw(uint &shCnt, uint_least8_t &mode, float &currentTemp)
+void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
 {
   char string[10];
   dtostrf(shCnt, 3, 0, string);
@@ -146,7 +173,7 @@ void ShootAndModeDraw(uint &shCnt, uint_least8_t &mode, float &currentTemp)
       
   display.setCursor(0, 30);
   display.println(currentTemp);
-  
+
   display.display();
   displayed = true;
 }

@@ -21,10 +21,12 @@ MechaQMC5883 qmc;
 // char BTState = DISCONNECTED;
 
 // Slave Flags
-/*
-#define DISPLAY 1 << 1
-#define FORCE_DISPLAY 1 << 2
-*/
+#define RESET 0
+#define DISPLAY (1 << 0)          // 0000 0001
+#define FORCE_DISPLAY (1 << 1)    // 0000 0010
+#define AZIMUTH (1 << 2)          // 0000 0100
+#define TEMPERATURE (1 << 3)      // 0000 1000
+
 
 boolean prevButton = false;   // previous pushbutton state
 boolean prevTrigger = false;  // previous trigger state
@@ -39,7 +41,7 @@ uint_least8_t dwell = 20;   // time the valve is open
 
 #define CALCULATE_STUFF 60000
 
-uint shootCnt = 0;
+unsigned int shootCnt = 0;
 uint_least32_t lastRenderTime = millis();
 uint_least32_t lastEtcRenderTime = millis();
 
@@ -178,27 +180,30 @@ void loop()
 
   GraphDraw();
   
-  {
-    int x, y, z, azimuth;
-    qmc.read(&x, &y, &z, &azimuth);
-    GraphUpdate(azimuth);
-  }  
   
   if (!displayed)
   {
     display.display();
+
   }*/
 
 // SLAVE COMMANDS
-  static uint_least8_t pMode = 8;
 
-  if (pMode != mode)
-  {
-    Wire.beginTransmission(2);
-    Wire.write(mode);
-    pMode = mode;
-    Wire.endTransmission();
-  }
+  Wire.beginTransmission(2);
+  Wire.write(DISPLAY | AZIMUTH);
+  // DISPLAY
+  // shootCnt
+
+  Wire.write(mode);
+
+  { // AZIMUTH
+    int x, y, z, azimuth;
+    qmc.read(&x, &y, &z, &azimuth);
+    Wire.write((uint_least8_t)azimuth);
+  }  
+
+  Wire.write(RESET);
+  Wire.endTransmission();
 }
 
 
@@ -280,22 +285,33 @@ void calculateEtc()
   {
     first = false;
 
-    // Send Temp
-    // sensors.requestTemperatures();
-    // currentTemp = sensors.getTempCByIndex(0);
-    
+    sensors.requestTemperatures();
+
+    // Send temperature
+    Wire.beginTransmission(2);
+    Wire.write(TEMPERATURE);
+
+    float temp = sensors.getTempCByIndex(0);
+    Wire.write(temp);
+
+    Serial.print("Temp: ");
+    Serial.println(temp);
+
+
+    Wire.endTransmission();
+
     lastEtcRenderTime = millis();
   }
 }
 
 
-void GraphUpdate(int &yPos)
+void GraphUpdate(uint_least8_t &yPos)
 {
   // Send new position (azimuth)
 }
 
 
-void ShootAndModeDraw(uint &shCnt, uint_least8_t &mode)
+void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
 {
   // Send shCnt and mode to slave
 }
