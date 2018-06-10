@@ -38,7 +38,6 @@ static const uint_least8_t PROGMEM yeti[] =
 };
 
 // Slave Flags
-#define RESET 0
 #define DISPLAY (1 << 0)          // 0000 0001
 #define FORCE_DISPLAY (1 << 1)    // 0000 0010
 #define AZIMUTH (1 << 2)          // 0000 0100
@@ -51,14 +50,14 @@ boolean displayed = false;    // has display been already refreshed
 uint_least8_t graphY[128];
 
 float currentTemp = -420.0f;
-
+uint_least8_t mode = 0;
 
 void setup()
 {
   Serial.begin(9600);
 
   // Start the I2C Bus as Slave on address 2
-  Wire.begin(2); 
+  Wire.begin(2);
   // Attach a function to trigger when something is received.
   Wire.onReceive(receiveEvent);
 
@@ -68,6 +67,7 @@ void setup()
 
 void loop()
 {
+  ShootAndModeDraw(0, mode);
 }
 
 
@@ -75,11 +75,13 @@ void receiveEvent(int bytes)
 {
   uint_least8_t orders = Wire.read();    // read one byte from the I2C
 
+  Serial.print("Orders: ");
+  Serial.println(orders);
+
   if (orders & DISPLAY)
   {
     // shootCnt
-    uint_least8_t mode = Wire.read();
-    ShootAndModeDraw(0, mode);
+    mode = Wire.read();
     displayed = true;
   }
   if (orders & FORCE_DISPLAY)
@@ -107,10 +109,6 @@ void receiveEvent(int bytes)
       temp.integer |= (t << (8 * i));
     }
     currentTemp = temp.floating;
-  }
-  if (orders == RESET)
-  {
-    displayed = false;
   }
 }
 
@@ -159,7 +157,7 @@ void GraphUpdateAndDraw(uint_least8_t &yPos)
 }
 
 
-void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
+void ShootAndModeDraw(unsigned int shCnt, uint_least8_t &mode)
 {
   char string[10];
   dtostrf(shCnt, 3, 0, string);
@@ -186,5 +184,4 @@ void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
   display.println(currentTemp);
 
   display.display();
-  displayed = true;
 }

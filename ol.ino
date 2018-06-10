@@ -21,7 +21,6 @@ MechaQMC5883 qmc;
 // char BTState = DISCONNECTED;
 
 // Slave Flags
-#define RESET 0
 #define DISPLAY (1 << 0)          // 0000 0001
 #define FORCE_DISPLAY (1 << 1)    // 0000 0010
 #define AZIMUTH (1 << 2)          // 0000 0100
@@ -169,25 +168,14 @@ void loop()
       Serial.print("Delay val: ");
       Serial.println(shDelay);      
     }
-  }*/
-
-// DISPLAY UPDATES
-  /*display.setCursor(0, 0);
-  display.println(RateOfFire());
-  
-  calculateEtc();
-  ShootAndModeDraw(shootCnt, mode);
-
-  GraphDraw();
-  
-  
-  if (!displayed)
-  {
-    display.display();
-
-  }*/
+  }
+*/
 
 // SLAVE COMMANDS
+  // display.setCursor(0, 0);
+  // display.println(RateOfFire());
+
+  calculateEtc();
 
   Wire.beginTransmission(2);
   Wire.write(DISPLAY | AZIMUTH);
@@ -202,7 +190,6 @@ void loop()
     Wire.write((uint_least8_t)azimuth);
   }  
 
-  Wire.write(RESET);
   Wire.endTransmission();
 }
 
@@ -291,7 +278,7 @@ void calculateEtc()
     Wire.beginTransmission(2);
     Wire.write(TEMPERATURE);
 
-    // Float deconstruction
+    // Float deconstruction implemented
     union
     {
       float floating;
