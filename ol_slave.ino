@@ -170,11 +170,11 @@ void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
   // Print shooting mode
   display.setCursor(0, 10);
   display.println(
-    mode == 0 ? "Safe" :
-    mode == 1 ? "Semi" :
-    mode == 2 ? "Auto" :
-    mode == 3 ? "Burst" :
-    mode == 4 ? "Rhythmic" : (char)(mode + '0'));
+    mode == (uint_least8_t)0 ? "Safe" :
+    mode == (uint_least8_t)1 ? "Semi" :
+    mode == (uint_least8_t)2 ? "Auto" :
+    mode == (uint_least8_t)3 ? "Burst" :
+    mode == (uint_least8_t)4 ? "Rhythmic" : " ");
 
   display.setFont(&FreeMono9pt7b);  // Set a custom font
   
