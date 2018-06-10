@@ -291,12 +291,24 @@ void calculateEtc()
     Wire.beginTransmission(2);
     Wire.write(TEMPERATURE);
 
-    float temp = sensors.getTempCByIndex(0);
-    Wire.write(temp);
+    // Float deconstruction
+    union
+    {
+      float floating;
+      int integer;
+    } temp;
+
+    temp.floating = sensors.getTempCByIndex(0);
+    
+    for (uint_least8_t i = 0; i < 4; i++)
+    {
+      uint_least8_t t;
+      t = (temp.integer >> (8 * i));
+      Wire.write(t);
+    }
 
     Serial.print("Temp: ");
-    Serial.println(temp);
-
+    Serial.println(temp.floating);
 
     Wire.endTransmission();
 

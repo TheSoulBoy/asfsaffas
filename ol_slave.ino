@@ -94,8 +94,19 @@ void receiveEvent(int bytes)
   }
   if (orders & TEMPERATURE)
   {
-    float c = Wire.read();
-    currentTemp = (c << 8) | (Wire.read());
+    // Float float reconstruction
+    union
+    {
+      float floating;
+      int integer;
+    } temp;
+
+    for (uint_least8_t i = 0; i < 4; i++)
+    {
+      uint_least8_t t = Wire.read();
+      temp.integer |= (t << (8 * i));
+    }
+    currentTemp = temp.floating;
   }
   if (orders == RESET)
   {
@@ -163,7 +174,7 @@ void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
     mode == 1 ? "Semi" :
     mode == 2 ? "Auto" :
     mode == 3 ? "Burst" :
-    mode == 4 ? "Rhythmic" : mode);
+    mode == 4 ? "Rhythmic" : (char)(mode + '0'));
 
   display.setFont(&FreeMono9pt7b);  // Set a custom font
   
