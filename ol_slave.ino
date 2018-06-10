@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeMono9pt7b.h>
+#include <bitset.h>
 
 static const uint_least8_t PROGMEM yeti[] =
 { 
@@ -45,8 +46,6 @@ static const uint_least8_t PROGMEM yeti[] =
 
 Adafruit_SSD1306 display;
 
-boolean displayed = false;    // has display been already refreshed
-
 uint_least8_t graphY[128];
 
 float currentTemp = -420.0f;
@@ -82,12 +81,9 @@ void receiveEvent(int bytes)
   {
     // shootCnt
     mode = Wire.read();
-    displayed = true;
   }
   if (orders & FORCE_DISPLAY)
   {
-    
-    displayed = true;
   }
   if (orders & AZIMUTH)
   {
@@ -106,9 +102,15 @@ void receiveEvent(int bytes)
     for (uint_least8_t i = 0; i < 4; i++)
     {
       uint_least8_t t = Wire.read();
-      temp.integer |= (t << (8 * i));
+      temp.integer = temp.integer | (t << (8 * i));
+      Serial.print(i);
+      Serial.print(" : ");
+      Serial.println(std::bitset<8>(t));
     }
     currentTemp = temp.floating;
+    Serial.print("Temp: ");
+    Serial.println(temp.floating);
+    Serial.println(std::bitset<sizeof(float) * CHAR_BIT>(temp.integer));
   }
 }
 
@@ -147,6 +149,7 @@ void GraphUpdateAndDraw(uint_least8_t &yPos)
     display.drawPixel((int16_t)i, 
       64 - (int16_t)graphY[i] * 32 / 360, 
       WHITE);
+    display.display();
   }
 
   graphY[127] = yPos;
@@ -154,6 +157,7 @@ void GraphUpdateAndDraw(uint_least8_t &yPos)
   display.drawPixel((int16_t)127, 
       64 - (int16_t)graphY[127] * 32 / 360, 
       WHITE);
+  display.display();
 }
 
 

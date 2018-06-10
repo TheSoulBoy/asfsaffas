@@ -2,7 +2,7 @@
 #include <DallasTemperature.h>
 #include <Wire.h>
 #include <MechaQMC5883.h>
-#include <Adafruit_GFX.h>
+#include <bitset.h>
 
 MechaQMC5883 qmc;
 
@@ -178,12 +178,13 @@ void loop()
   calculateEtc();
 
   Wire.beginTransmission(2);
-  Wire.write(DISPLAY | AZIMUTH);
+  Wire.write((uint_least8_t)DISPLAY);
   // DISPLAY
   // shootCnt
 
-  Wire.write(mode);
+  Wire.write((uint_least8_t)mode);
 
+  Wire.write((uint_least8_t)AZIMUTH);
   { // AZIMUTH
     int x, y, z, azimuth;
     qmc.read(&x, &y, &z, &azimuth);
@@ -252,10 +253,7 @@ void shoot()
 Forced display
   ShootAndModeDraw(shootCnt, mode);
 
-  display.display();
-  displayed = true;
   */
-  calculateEtc();
 
   Serial.print("Shot count: ");
   Serial.println(shootCnt);
@@ -276,7 +274,7 @@ void calculateEtc()
 
     // Send temperature
     Wire.beginTransmission(2);
-    Wire.write(TEMPERATURE);
+    Wire.write((uint_least8_t)TEMPERATURE);
 
     // Float deconstruction implemented
     union
@@ -291,11 +289,12 @@ void calculateEtc()
     {
       uint_least8_t t;
       t = (temp.integer >> (8 * i));
-      Wire.write(t);
+      Wire.write((uint_least8_t)t);
     }
 
     Serial.print("Temp: ");
     Serial.println(temp.floating);
+    Serial.println(std::bitset<sizeof(float) * CHAR_BIT>(temp.integer))
 
     Wire.endTransmission();
 
