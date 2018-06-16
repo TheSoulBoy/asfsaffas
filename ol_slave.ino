@@ -1,7 +1,6 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeMono9pt7b.h>
-#include <bitset.h>
 
 static const uint_least8_t PROGMEM yeti[] =
 { 
@@ -51,6 +50,7 @@ uint_least8_t graphY[128];
 float currentTemp = -420.0f;
 uint_least8_t mode = 0;
 
+
 void setup()
 {
   Serial.begin(9600);
@@ -67,6 +67,7 @@ void setup()
 void loop()
 {
   ShootAndModeDraw(0, mode);
+  delay(16);                        // ~60 fps
 }
 
 
@@ -105,12 +106,12 @@ void receiveEvent(int bytes)
       temp.integer = temp.integer | (t << (8 * i));
       Serial.print(i);
       Serial.print(" : ");
-      Serial.println(std::bitset<8>(t));
+      Serial.println(t, BIN);
     }
     currentTemp = temp.floating;
     Serial.print("Temp: ");
     Serial.println(temp.floating);
-    Serial.println(std::bitset<sizeof(float) * CHAR_BIT>(temp.integer));
+    Serial.println(temp.integer, BIN);
   }
 }
 

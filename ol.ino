@@ -2,7 +2,6 @@
 #include <DallasTemperature.h>
 #include <Wire.h>
 #include <MechaQMC5883.h>
-#include <bitset.h>
 
 MechaQMC5883 qmc;
 
@@ -177,6 +176,8 @@ void loop()
 
   calculateEtc();
 
+  delay(1);
+  
   Wire.beginTransmission(2);
   Wire.write((uint_least8_t)DISPLAY);
   // DISPLAY
@@ -294,7 +295,7 @@ void calculateEtc()
 
     Serial.print("Temp: ");
     Serial.println(temp.floating);
-    Serial.println(std::bitset<sizeof(float) * CHAR_BIT>(temp.integer))
+    Serial.println(temp.integer, BIN)
 
     Wire.endTransmission();
 
