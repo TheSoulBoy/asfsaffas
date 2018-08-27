@@ -1,322 +1,124 @@
-#include <OneWire.h> 
-#include <DallasTemperature.h>
+/*
+ * DISPLAYER
+ */
+
+#include <Adafruit_GFX.h> 
+#include <Adafruit_SSD1306.h>
+#include <OneWire.h>
 #include <Wire.h>
-#include <MechaQMC5883.h>
+#include <DallasTemperature.h>
+#include <QMC5883.h>
+#include <WireData.h>
 
-MechaQMC5883 qmc;
+#define ONE_WIRE_BUS 2
+#define GRAPH_LENGHT 127
 
-// PINS --------------------------
-// the number of the mode pin
-#define BUTTON_PIN 8
-// the number of the trigger pin
-#define TRIGGER_PIN 11
-// the number of the LED (out) pin
-#define LED_PIN 13
-#define TEMP_PIN 10
+const int slaveAddress = 0x08;
+    
+OneWire oneWire (ONE_WIRE_BUS);
+Adafruit_SSD1306 display;
+float Temp;
+int deg;
 
-// Bluetooth variables
-#define CONNECTED -1
-#define DISCONNECTED -2
-// char BTState = DISCONNECTED;
+uint_least8_t graphY[GRAPH_LENGHT + 1]{ 0 };
 
-// Slave Flags
-#define DISPLAY (1 << 0)          // 0000 0001
-#define FORCE_DISPLAY (1 << 1)    // 0000 0010
-#define AZIMUTH (1 << 2)          // 0000 0100
-#define TEMPERATURE (1 << 3)      // 0000 1000
-
-
-boolean prevButton = false;   // previous pushbutton state
-boolean prevTrigger = false;  // previous trigger state
-int buttonState = 0;      // variable for reading the pushbutton status
-int triggerState = 0;     // variable for reading the trigger status
-
-OneWire oneWire(10);
-DallasTemperature sensors(&oneWire);
-
-uint_least8_t shDelay = 5;  // wait after shooting in millisecond
-uint_least8_t dwell = 20;   // time the valve is open
-
-#define CALCULATE_STUFF 60000
-
-unsigned int shootCnt = 0;
-uint_least32_t lastRenderTime = millis();
-uint_least32_t lastEtcRenderTime = millis();
-
-uint_least8_t mode = 0;
-
-// cia burst mode kiekis
-#define BURST_AMOUNT 3 
-
-#define MY_SIZE 25
-const int16_t pausesBetweenShots[] = 
-{
-  125, 125,
-  250, 250, 250,
-  500, 125, 125,
-  250, 250, 250,
-  500, 125, 125,
-  250, 250, 250,
-  250, 250, 125, 125,
-  250, 250, 250,
-  750
-}; // Happy birthday ritmas
-//sesioliktine - 125, astuntine - 250, ketvirtine - 500
-
-// float lengthMultiplier = 1; // jeigu per greitai groja ritma tai padidink
+static const unsigned char PROGMEM yeti[] =
+{ 
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0xFF, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0xFF, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0xFF, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0xFF, 0xFE, 0x00, 0x00, 0x01, 0x80, 0x00, 0x07, 0xFF, 0xFE, 0x00, 0x00, 0x07, 0xC0, 0x00, 0x07,
+	0xFF, 0xFE, 0x00, 0x00, 0x07, 0xE0, 0x00, 0x07, 0xFF, 0xFF, 0xF0, 0x00, 0x07, 0xE0, 0x00, 0x07,
+	0xFF, 0xFF, 0xF0, 0x00, 0x07, 0xFF, 0xF0, 0x07, 0xFF, 0xFF, 0xFE, 0x00, 0x07, 0xFF, 0xFE, 0x07,
+	0xFF, 0xFF, 0xFF, 0x00, 0x03, 0xFF, 0xFF, 0x87, 0xFF, 0xFF, 0xFF, 0x80, 0x03, 0xFF, 0xFF, 0xC7,
+	0xFF, 0xFF, 0xFF, 0xC0, 0x0F, 0xFF, 0xFF, 0xC7, 0xFF, 0xFF, 0xFF, 0xC0, 0x0F, 0xFF, 0xFF, 0xE7,
+	0xFF, 0xFF, 0xFF, 0xE0, 0x0F, 0xFF, 0xFF, 0xE7, 0xFF, 0xFF, 0xFF, 0xE0, 0x0F, 0xFF, 0xE1, 0xE7,
+	0xFF, 0xFF, 0xFF, 0xE0, 0x0F, 0xFF, 0xE1, 0xE7, 0xFF, 0xFF, 0xFF, 0xC0, 0x3F, 0x7F, 0xE0, 0xF7,
+	0xFF, 0xFF, 0xFF, 0x00, 0x3E, 0x3F, 0xE0, 0xF7, 0xFF, 0xFF, 0xFF, 0x00, 0x3E, 0x1F, 0xF1, 0xF7,
+	0xFF, 0xFF, 0xFF, 0x80, 0x3C, 0x1F, 0xF1, 0x77, 0xFF, 0xFF, 0xFF, 0x80, 0x3C, 0x3F, 0xF0, 0x77,
+	0xFF, 0xFF, 0xFF, 0xFC, 0x3E, 0x7F, 0xF0, 0x77, 0xFF, 0xFF, 0xFF, 0xFE, 0x3E, 0xFF, 0xFF, 0x77,
+	0xFF, 0xFF, 0xFF, 0xFE, 0x3E, 0xFF, 0xFF, 0x37, 0xFF, 0xFF, 0xFF, 0xFE, 0x38, 0xFE, 0xFF, 0x87,
+	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x78, 0x3F, 0xC7, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x7C, 0x07, 0xE7,
+	0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x3E, 0x01, 0xE7, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x3E, 0x01, 0xC7,
+	0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x7E, 0x1F, 0xC7, 0xFF, 0xFF, 0xFF, 0xFF, 0x83, 0xFF, 0x0F, 0x87,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xF1, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xE3, 0x37, 0x19, 0x9B, 0x10, 0x63, 0x8E, 0xFB,
+	0xCB, 0x36, 0xED, 0x9A, 0x5D, 0xDD, 0xB6, 0x73, 0xCF, 0x14, 0xE5, 0x9A, 0x7D, 0xDD, 0xB6, 0x73,
+	0xE3, 0x54, 0xE5, 0x13, 0x1D, 0x9C, 0x8E, 0xAB, 0xFB, 0x44, 0xE4, 0x47, 0xDD, 0xDD, 0xAE, 0xAB,
+	0xDB, 0x66, 0xEE, 0x66, 0xDD, 0xDD, 0xB6, 0xDB, 0xC3, 0x77, 0x1E, 0xEE, 0x1D, 0xE3, 0xB6, 0xDB,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+};
 
 
 void setup()
-{
-  pinMode(LED_PIN, OUTPUT);  // initialize the LED pin as an output
-  pinMode(BUTTON_PIN, INPUT);  // initialize the mode pin as an input
-  pinMode(TRIGGER_PIN, INPUT); // initialize the trigger pin as an input
-  pinMode(TEMP_PIN, INPUT);
-  
-  sensors.begin(); 
+{                
+	Serial.begin(9600);
+	Wire.begin();
+	display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
-  calculateEtc();
-  
-  Serial.begin(9600);
-  Wire.begin();
-  qmc.init();
+	delay(100);
+	display.clearDisplay();
+	display.setTextColor(WHITE);
+	display.drawBitmap(0, 0, yeti, 64, 60, WHITE);
+	display.display();
+
+	for (int xval = 0; xval <= 124; xval++)
+	{
+		int y = 63; 
+		display.drawPixel(xval, y, WHITE);
+		display.drawPixel(xval, y - 1, WHITE);
+		display.display();
+		delay(1); 
+	}
 }
 
 
-void loop()
+void loop()  
 {
-// STATE READING
-  buttonState = digitalRead(BUTTON_PIN);
-  triggerState = digitalRead(TRIGGER_PIN);
+	float data;
+	int a;
 
-// MODE SWITCH
-  if (buttonState == HIGH && !prevButton)
-  {
-    // cycle modes 0 to 4
-    if (++mode == 5)
-    {
-      mode = 0;
-    }
+	Wire.requestFrom(slaveAddress, sizeof(data) + sizeof(int));
+	wireReadData(a);
+	wireReadData(data);
 
-    // prints current mode to console
-    Serial.print("Master Mode: ");
-    Serial.println(mode);
+	display.clearDisplay();
 
-    // prevents multiple switching
-    prevButton = true;
-  }
-  else if (buttonState != HIGH)
-  {
-    prevButton = false;
-  }
+	display.setCursor(0,0);
+	display.setTextSize(3);
+	display.print(data);
 
+	GraphUpdate((uint_least8_t) a);
+	GraphDraw();
 
-// SHOTING
-  if (triggerState == HIGH)
-  {
-    switch (mode)
-    {
-      case 0:
-        break;
-      case 1:
-        semi(!prevTrigger);
-        break;
-      case 2:
-        full();
-        break;
-      case 3:
-        burst(BURST_AMOUNT, !prevTrigger);
-        break;
-      case 4:
-        rythmic();
-        break;
-    }
-    prevTrigger = true;
-  }
-  else
-  {
-    prevTrigger = false;
-  }
-
-// BLUETOOTH
-/*  if (Serial.available() > 0)
-  {
-    int16_t data = Serial.read();
-
-    Serial.print("READ: ");
-    Serial.println(data);
-
-    if (data == CONNECTED)
-    {
-      BTState
-      Serial.println("Connected!");
-    }
-    else if (data == DISCONNECTED)
-    {
-      Serial.println("Disconnected!");
-    }
-    if (0 < data && data < 51)
-    {
-      dwell = (uint_least8_t)data;
-      Serial.print("dwell val: ");
-      Serial.println(dwell);
-    }
-    else if (50 < data && data < 101)
-    {
-      shDelay = (uint_least8_t)data - 50;
-      Serial.print("Delay val: ");
-      Serial.println(shDelay);      
-    }
-  }
-*/
-
-// SLAVE COMMANDS
-  // display.setCursor(0, 0);
-  // display.println(RateOfFire());
-
-  calculateEtc();
-
-  delay(1);
-  
-  Wire.beginTransmission(2);
-  Wire.write((uint_least8_t)DISPLAY);
-  // DISPLAY
-  // shootCnt
-
-  Wire.write((uint_least8_t)mode);
-
-  Wire.write((uint_least8_t)AZIMUTH);
-  { // AZIMUTH
-    int x, y, z, azimuth;
-    qmc.read(&x, &y, &z, &azimuth);
-    Wire.write((uint_least8_t)azimuth);
-  }  
-
-  Wire.endTransmission();
+	display.display();
 }
 
 
-void semi(boolean released)
+void GraphUpdate(int yPos)
 {
-  if (released)
-  {
-    shoot();
-  }
-  else
-  {
-    Serial.println("wait"); 
-  }
+	for (int i = 0; i < GRAPH_LENGHT; i++)
+	{
+		graphY[i] = graphY[i + 1];
+	}
+	graphY[GRAPH_LENGHT] = yPos;
 }
 
 
-void full()
+void GraphDraw()
 {
-  shoot();
-}
-
-
-void burst(int16_t n, boolean released)
-{
-  if (released)
-  {
-    for (int16_t i = 0; i < n; i++)
-    {
-      shoot();
-    }
-  }
-  else
-  {
-    Serial.println("wait"); 
-  }
-}
-
-
-void rythmic()
-{
-  int pauseCount = 0;
-  while(pauseCount < MY_SIZE)
-  {
-    shoot();
-    delay(pausesBetweenShots[pauseCount]);
-    pauseCount++;
-  }
-}
-
-
-void shoot()
-{
-  delay(shDelay);
-  digitalWrite(LED_PIN, HIGH);
-  delay(dwell);
-  digitalWrite(LED_PIN, LOW);
-  shootCnt++;
-  /*
-Forced display
-  ShootAndModeDraw(shootCnt, mode);
-
-  */
-
-  Serial.print("Shot count: ");
-  Serial.println(shootCnt);
-}
-
-
-void calculateEtc()
-{
-  static boolean first = true;
-  float currentTime = millis();
-  boolean isCacheInvalid = currentTime - lastEtcRenderTime > CALCULATE_STUFF || first;
-  boolean isButtonPinTriggered = digitalRead(BUTTON_PIN) == HIGH;
-  if (isCacheInvalid && !isButtonPinTriggered)
-  {
-    first = false;
-
-    sensors.requestTemperatures();
-
-    // Send temperature
-    Wire.beginTransmission(2);
-    Wire.write((uint_least8_t)TEMPERATURE);
-
-    // Float deconstruction implemented
-    union
-    {
-      float floating;
-      int integer;
-    } temp;
-
-    temp.floating = sensors.getTempCByIndex(0);
-    
-    for (uint_least8_t i = 0; i < 4; i++)
-    {
-      uint_least8_t t;
-      t = (temp.integer >> (8 * i));
-      Wire.write((uint_least8_t)t);
-    }
-
-    Serial.print("Temp: ");
-    Serial.println(temp.floating);
-    Serial.println(temp.integer, BIN)
-
-    Wire.endTransmission();
-
-    lastEtcRenderTime = millis();
-  }
-}
-
-
-void GraphUpdate(uint_least8_t &yPos)
-{
-  // Send new position (azimuth)
-}
-
-
-void ShootAndModeDraw(unsigned int &shCnt, uint_least8_t &mode)
-{
-  // Send shCnt and mode to slave
-}
-
-
-uint_least8_t RateOfFire()
-{
-  return 1000 / (dwell + shDelay);
+	for (int i = 0; i < GRAPH_LENGHT + 1; i++)
+	{
+		display.drawPixel(i, 
+				64 - (int16_t)graphY[i] * 32 / 360, 
+				WHITE);
+	}
 }
